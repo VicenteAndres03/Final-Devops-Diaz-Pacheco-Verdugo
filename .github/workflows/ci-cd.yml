@@ -1,0 +1,71 @@
+name: CI - Build, Test y Push a ECR
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch: {}
+
+env:
+  AWS_REGION: us-west-2
+  ECR_VENTAS: eft-back-ventas
+  ECR_DESPACHOS: eft-back-despachos
+  ECR_FRONTEND: eft-front-despacho
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: back-ventas
+            context: ./back-Ventas_SpringBoot/Springboot-API-REST
+            is_backend: true
+          - name: back-despachos
+            context: ./back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO
+            is_backend: true
+          - name: front-despacho
+            context: ./front_despacho
+            is_backend: false
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciales de AWS (AWS Academy)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login en Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Configurar JDK 17
+        if: matrix.is_backend == true
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Ejecutar tests (Maven)
+        if: matrix.is_backend == true
+        working-directory: ${{ matrix.context }}
+        run: mvn -B test
+
+      - name: Build y push de la imagen a ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          case "${{ matrix.name }}" in
+            back-ventas)     REPO="${{ env.ECR_VENTAS }}" ;;
+            back-despachos)  REPO="${{ env.ECR_DESPACHOS }}" ;;
+            front-despacho)  REPO="${{ env.ECR_FRONTEND }}" ;;
+          esac
+          docker build -t $ECR_REGISTRY/$REPO:$IMAGE_TAG -t $ECR_REGISTRY/$REPO:latest ${{ matrix.context }}
+          docker push $ECR_REGISTRY/$REPO:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$REPO:latest
