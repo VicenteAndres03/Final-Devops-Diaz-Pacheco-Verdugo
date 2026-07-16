@@ -1,0 +1,17 @@
+# Maven (microservicios)
+target/
+*.class
+
+# Node (frontend)
+node_modules/
+dist/
+build/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Variables de entorno / secretos
+.env
+.DS_Store
