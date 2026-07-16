@@ -6,7 +6,7 @@ on:
   workflow_dispatch: {}
 
 env:
-  AWS_REGION: us-west-2
+  AWS_REGION: us-east-1
   ECR_VENTAS: eft-back-ventas
   ECR_DESPACHOS: eft-back-despachos
   ECR_FRONTEND: eft-front-despacho
@@ -15,6 +15,7 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           - name: back-ventas
